@@ -9,17 +9,38 @@
 import UIKit
 import AFNetworking
 
-class MoviesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class MoviesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchResultsUpdating {
     
     @IBOutlet weak var tableView: UITableView!
     
     var movies: [NSDictionary]?
+    
+    var filteredData: [NSDictionary]!
+    var searchController: UISearchController!
+    
+    //for refreshing
+    var refreshControl: UIRefreshControl!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         tableView.dataSource = self
         tableView.delegate = self
+        
+        filteredData = movies
+        searchController = UISearchController(searchResultsController: nil)
+        searchController.searchResultsUpdater = self
+        searchController.dimsBackgroundDuringPresentation = false
+        
+        //puts search bar on top as header
+        searchController.searchBar.sizeToFit()
+        tableView.tableHeaderView = searchController.searchBar
+        
+        definesPresentationContext = true
+        
+        refreshControl = UIRefreshControl()
+        refreshControl.addTarget(self, action: "onRefresh", forControlEvents: UIControlEvents.ValueChanged)
+        tableView.insertSubview(refreshControl, atIndex: 0)
 
         // Do any additional setup after loading the view.
         let apiKey = "a07e22bc18f5cb106bfe4cc1f83ad8ed"
@@ -54,12 +75,18 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
     //REQUIRED methods of UITableViewDataSource
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
+        if searchController.active && searchController.searchBar.text != "" {
+            return filteredData.count
+        }
+        
         //if movies is not nil then
         if let movies = movies {
             return movies.count
         } else {
             return 0
         }
+        
+        
        
         
         
@@ -69,7 +96,15 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("MovieCell", forIndexPath: indexPath) as! MovieCell
         
-        let movie = movies![indexPath.row] //NOT nil
+        let movie: NSDictionary
+        
+        if searchController.active && searchController.searchBar.text != "" {
+            movie = filteredData[indexPath.row]
+        } else {
+            movie = movies![indexPath.row]
+        }
+        
+        //let movie = movies![indexPath.row] //NOT nil
         let title = movie["title"] as! String
         let overview = movie["overview"] as! String
         let posterPath = movie["poster_path"] as! String
@@ -84,6 +119,34 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         
         print("row \(indexPath.row)")
         return cell
+    }
+    
+    //used for refreshing
+    func delay(delay:Double, closure:()->()) {
+        dispatch_after(
+            dispatch_time(
+                DISPATCH_TIME_NOW,
+                Int64(delay * Double(NSEC_PER_SEC))
+            ),
+            dispatch_get_main_queue(), closure)
+    }
+    
+    func onRefresh() {
+        delay(2, closure: {
+            self.refreshControl.endRefreshing()
+        })
+    }
+    
+    //used for searching
+    func filterContentForSearchText(searchText: String, scope: String = "All") {
+        filteredData = movies!.filter { movie in
+            return movie["title"]!.containsString(searchText)
+        }
+        tableView.reloadData()
+    }
+    
+    func updateSearchResultsForSearchController(searchController: UISearchController) {
+        filterContentForSearchText(searchController.searchBar.text!)
     }
     
 
