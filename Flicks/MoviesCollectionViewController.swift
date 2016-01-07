@@ -1,18 +1,18 @@
 //
-//  MoviesViewController.swift
+//  MoviesCollectionViewController.swift
 //  Flicks
 //
-//  Created by Peyt Spencer Dewar on 1/5/16.
+//  Created by Peyt Spencer Dewar on 1/7/16.
 //  Copyright © 2016 PSD. All rights reserved.
 //
 
 import UIKit
 import AFNetworking
 
-class MoviesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchResultsUpdating {
+class MoviesCollectionViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate, UISearchResultsUpdating {
     
-    @IBOutlet weak var tableView: UITableView!
-    
+    @IBOutlet weak var collectionView: UICollectionView!
+
     var movies: [NSDictionary]?
     
     var filteredData: [NSDictionary]!
@@ -21,11 +21,17 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
     //for refreshing
     var refreshControl: UIRefreshControl!
     
+    //from tmdb url
+    let baseUrl = "http://image.tmdb.org/t/p/w500"
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        let layout: UICollectionViewFlowLayout = UICollectionViewFlowLayout()
+        layout.sectionInset = UIEdgeInsets(top: 20, left: 10, bottom: 10, right: 10)
+        layout.itemSize = CGSize(width: 100, height: 150)
         
-        tableView.dataSource = self
-        tableView.delegate = self
+        collectionView.dataSource = self
+        collectionView.delegate = self
         
         filteredData = movies
         searchController = UISearchController(searchResultsController: nil)
@@ -34,14 +40,14 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         
         //puts search bar on top as header
         searchController.searchBar.sizeToFit()
-        tableView.tableHeaderView = searchController.searchBar
-        
+        //searchBarPlaceholder.addSubview(searchController.searchBar)
+        automaticallyAdjustsScrollViewInsets = false
         definesPresentationContext = true
         
         refreshControl = UIRefreshControl()
         refreshControl.addTarget(self, action: "onRefresh", forControlEvents: UIControlEvents.ValueChanged)
-        tableView.insertSubview(refreshControl, atIndex: 0)
-
+        collectionView.insertSubview(refreshControl, atIndex: 0)
+        
         // Do any additional setup after loading the view.
         let apiKey = "a07e22bc18f5cb106bfe4cc1f83ad8ed"
         let url = NSURL(string:"https://api.themoviedb.org/3/movie/now_playing?api_key=\(apiKey)")
@@ -59,21 +65,20 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
                         data, options:[]) as? NSDictionary {
                             NSLog("response: \(responseDictionary)")
                             self.movies = responseDictionary["results"] as! [NSDictionary]
-                            self.tableView.reloadData()
+                            self.collectionView.reloadData()
                             
                     }
                 }
         });
         task.resume()
     }
-
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
+        
     }
     
-    //REQUIRED methods of UITableViewDataSource
-    func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         
         if searchController.active && searchController.searchBar.text != "" {
             return filteredData.count
@@ -85,36 +90,61 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         } else {
             return 0
         }
-        
     }
     
-    func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier("MovieCell", forIndexPath: indexPath) as! MovieCell
+    func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCellWithReuseIdentifier("NewMovieCell", forIndexPath: indexPath) as! NewMovieCell
         
         let movie: NSDictionary
         
-        if searchController.active && searchController.searchBar.text != "" {
-            movie = filteredData[indexPath.row]
-        } else {
-            movie = movies![indexPath.row]
-        }
+        movie = movies![indexPath.item]
         
         //let movie = movies![indexPath.row] //NOT nil
         let title = movie["title"] as! String
-        let overview = movie["overview"] as! String
+        //let overview = movie["overview"] as! String
         let posterPath = movie["poster_path"] as! String
-        
-        let baseUrl = "http://image.tmdb.org/t/p/w500"
         
         let imageUrl = NSURL(string: baseUrl + posterPath)
         
         cell.titleLabel.text = title
-        cell.overviewLabel.text = overview
+        /*cell.overviewLabel.text = overview
+
+        let backdropPath = movie["backdrop_path"] as! String
+        let backdropURL = NSURL(string: baseUrl + backdropPath)
+*/
+        
         cell.posterView.setImageWithURL(imageUrl!)
         
         print("row \(indexPath.row)")
         return cell
+        
     }
+
+    var selectedData = DataModel()
+    //for selecting item
+    func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
+        let movie = movies![indexPath.item]
+        self.selectedData.movieSummary = movie["overview"] as? String
+        
+        //self.selectedData.movieBackdrop
+       
+        
+        
+        //print(backdropURL)
+        print(self.selectedData.movieSummary)
+        
+        
+        //self.performSegueWithIdentifier("GetMovieInfo", sender: movies)
+    }
+    
+    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+        if segue.identifier == "GetMovieInfo" {
+            if let destinationVC = segue.destinationViewController as? MovieSelectionViewController {
+                destinationVC.dataModel = self.selectedData
+            }
+        }
+    }
+
     
     //used for refreshing
     func delay(delay:Double, closure:()->()) {
@@ -137,22 +167,11 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         filteredData = movies!.filter { movie in
             return movie["title"]!.containsString(searchText)
         }
-        tableView.reloadData()
+        collectionView.reloadData()
     }
     
     func updateSearchResultsForSearchController(searchController: UISearchController) {
         filterContentForSearchText(searchController.searchBar.text!)
     }
     
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }
