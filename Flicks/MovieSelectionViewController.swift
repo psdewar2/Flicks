@@ -10,17 +10,48 @@ import UIKit
 
 class MovieSelectionViewController: UIViewController {
 
+    @IBOutlet var scrollView: UIScrollView!
+    @IBOutlet var titleLabel: UILabel!
     @IBOutlet var overviewLabel: UILabel!
     @IBOutlet var backdropView: UIImageView!
+    @IBOutlet var movieInfoView: UIView!
     
-    var dataModel : DataModel?
+    var movie: NSDictionary!
+    
+    //from tmdb url
+    let baseUrl = "http://image.tmdb.org/t/p/w500"
+    
+    //var dataModel : DataModel?
     
     override func viewDidLoad() {
         super.viewDidLoad()
 
         // Do any additional setup after loading the view.
+        let title = movie["title"] as? String
+        titleLabel.text = title
+        let overview = movie["overview"] as? String
+        overviewLabel.text = overview
+        overviewLabel.sizeToFit()
+        if let posterPath = movie["poster_path"] as? String {
+            
+            let imageUrl = NSURL(string: baseUrl + posterPath)
+            backdropView.setImageWithURL(imageUrl!)
+            
+        }
+        
+        let contentWidth = scrollView.frame.size.width
+        let contentHeight = movieInfoView.frame.origin.y + movieInfoView.frame.size.height
+        scrollView.contentSize = CGSize(width: contentWidth, height: contentHeight)
+        
+        /*
+        self.title = dataModel!.movieTitle
         overviewLabel.text = dataModel!.movieSummary
-        backdropView.image = dataModel!.movieBackdrop
+        overviewLabel.sizeToFit()
+        scrollOverview.addSubview(overviewLabel)
+        scrollOverview.scrollsToTop = true
+        backdropView.setImageWithURL(dataModel!.movieBackdrop!)
+        */
+
     }
 
     override func didReceiveMemoryWarning() {
@@ -43,6 +74,10 @@ class MovieSelectionViewController: UIViewController {
 }
 
 class DataModel : NSObject {
+    var movieTitle: String?
+    var movieBackdrop: NSURL?
     var movieSummary: String?
-    var movieBackdrop: UIImage?
+    
+    
+    
 }

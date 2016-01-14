@@ -14,9 +14,9 @@ class MoviesCollectionViewController: UIViewController, UICollectionViewDataSour
     @IBOutlet weak var collectionView: UICollectionView!
 
     var movies: [NSDictionary]?
+    var endpoint: String!
     
     var filteredData: [NSDictionary]!
-    var searchController: UISearchController!
     
     //for refreshing
     var refreshControl: UIRefreshControl!
@@ -34,12 +34,7 @@ class MoviesCollectionViewController: UIViewController, UICollectionViewDataSour
         collectionView.delegate = self
         
         filteredData = movies
-        searchController = UISearchController(searchResultsController: nil)
-        searchController.searchResultsUpdater = self
-        searchController.dimsBackgroundDuringPresentation = false
-        
-        //puts search bar on top as header
-        searchController.searchBar.sizeToFit()
+
         //searchBarPlaceholder.addSubview(searchController.searchBar)
         automaticallyAdjustsScrollViewInsets = false
         definesPresentationContext = true
@@ -50,7 +45,7 @@ class MoviesCollectionViewController: UIViewController, UICollectionViewDataSour
         
         // Do any additional setup after loading the view.
         let apiKey = "a07e22bc18f5cb106bfe4cc1f83ad8ed"
-        let url = NSURL(string:"https://api.themoviedb.org/3/movie/now_playing?api_key=\(apiKey)")
+        let url = NSURL(string:"https://api.themoviedb.org/3/movie/\(endpoint)?api_key=\(apiKey)")
         let request = NSURLRequest(URL: url!)
         let session = NSURLSession(
             configuration: NSURLSessionConfiguration.defaultSessionConfiguration(),
@@ -80,10 +75,6 @@ class MoviesCollectionViewController: UIViewController, UICollectionViewDataSour
     
     func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         
-        if searchController.active && searchController.searchBar.text != "" {
-            return filteredData.count
-        }
-        
         //if movies is not nil then
         if let movies = movies {
             return movies.count
@@ -99,50 +90,58 @@ class MoviesCollectionViewController: UIViewController, UICollectionViewDataSour
         
         movie = movies![indexPath.item]
         
-        //let movie = movies![indexPath.row] //NOT nil
+        cell.titleLabel.adjustsFontSizeToFitWidth = true
         let title = movie["title"] as! String
-        //let overview = movie["overview"] as! String
-        let posterPath = movie["poster_path"] as! String
-        
-        let imageUrl = NSURL(string: baseUrl + posterPath)
-        
         cell.titleLabel.text = title
-        /*cell.overviewLabel.text = overview
-
-        let backdropPath = movie["backdrop_path"] as! String
-        let backdropURL = NSURL(string: baseUrl + backdropPath)
-*/
-        
-        cell.posterView.setImageWithURL(imageUrl!)
         
         print("row \(indexPath.row)")
+        
+        if let posterPath = movie["poster_path"] as? String {
+        
+            let imageUrl = NSURL(string: baseUrl + posterPath)
+            cell.posterView.setImageWithURL(imageUrl!)
+            
+        }
+        
         return cell
         
     }
 
+    /*
     var selectedData = DataModel()
     //for selecting item
     func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
         let movie = movies![indexPath.item]
+        self.selectedData.movieTitle = movie["title"] as? String
         self.selectedData.movieSummary = movie["overview"] as? String
         
-        //self.selectedData.movieBackdrop
-       
         
         
-        //print(backdropURL)
+        
+        //CHECK FOR NULL VALUES
+        let posterPath = movie["poster_path"] as! String
+        
+        let imageUrl = NSURL(string: baseUrl + posterPath)
+        let backdropPath = movie["backdrop_path"] as! String
+        let backdropURL = NSURL(string: baseUrl + backdropPath)
+        print(backdropURL)
+        self.selectedData.movieBackdrop = imageUrl
         print(self.selectedData.movieSummary)
-        
-        
-        //self.performSegueWithIdentifier("GetMovieInfo", sender: movies)
+
     }
+    */
     
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        if segue.identifier == "GetMovieInfo" {
+            let item = sender as! NewMovieCell
+            let indexPath = collectionView.indexPathForCell(item)
+            let movie = movies![indexPath!.item]
+            let destinationVC = segue.destinationViewController as! MovieSelectionViewController
+            destinationVC.movie = movie
+            /*
             if let destinationVC = segue.destinationViewController as? MovieSelectionViewController {
                 destinationVC.dataModel = self.selectedData
             }
-        }
+*/
     }
 
     
